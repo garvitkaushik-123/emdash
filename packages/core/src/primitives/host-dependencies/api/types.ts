@@ -33,7 +33,12 @@ export type HostDependencyDefinition = z.output<typeof hostDependencyDefinitionS
 export const hostDependencySelectionSchema = z
   .discriminatedUnion('kind', [
     z.object({ kind: z.literal('path'), path: z.string().min(1) }),
-    z.object({ kind: z.literal('cli'), command: z.string().min(1) }),
+    z.object({
+      kind: z.literal('cli'),
+      command: z.string().min(1),
+      /** Save the command without requiring it to resolve now; it is looked up at launch. */
+      skipValidation: z.boolean().optional(),
+    }),
   ])
   .nullable();
 export type HostDependencySelection = z.output<typeof hostDependencySelectionSchema>;

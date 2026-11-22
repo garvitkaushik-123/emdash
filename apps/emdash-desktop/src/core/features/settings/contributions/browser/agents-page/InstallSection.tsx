@@ -153,6 +153,8 @@ const LocalInstallSection = observer(function LocalInstallSection({
     return vm.used?.kind === 'cli' ? vm.used.command : '';
   }, [vm.used]);
 
+  const initialSkipValidation = vm.used?.kind === 'cli' && vm.used.skipValidation === true;
+
   const selectedInstall = findInstallation(vm.installations, selectedSource);
 
   const isOverrideEmpty =
@@ -242,10 +244,11 @@ const LocalInstallSection = observer(function LocalInstallSection({
 
       {isOverrideRef(selectedSource) && (
         <InstallationOverrideCard
-          key={`${selectedSource.kind}:${selectedSource.kind === 'path' ? initialPath : initialCli}`}
+          key={`${selectedSource.kind}:${selectedSource.kind === 'path' ? initialPath : initialCli}:${initialSkipValidation}`}
           vm={vm}
           kind={selectedSource.kind}
           initialValue={selectedSource.kind === 'path' ? initialPath : initialCli}
+          initialSkipValidation={initialSkipValidation}
           onChecking={setIsChecking}
           onSaved={() => setSourceDraft(null)}
         />

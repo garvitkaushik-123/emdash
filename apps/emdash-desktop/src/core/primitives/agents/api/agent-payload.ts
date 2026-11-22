@@ -53,7 +53,7 @@ export type InstallOverride =
   | { kind: 'pinned'; realpath: string }
   | { kind: 'method'; method: InstallMethod }
   | { kind: 'path'; path: string }
-  | { kind: 'cli'; command: string };
+  | { kind: 'cli'; command: string; skipValidation?: boolean };
 
 /**
  * Runtime / UI union that adds 'auto' to the persisted override kinds.
@@ -113,7 +113,7 @@ export function resolveActiveInstallation(
 /** Canonical persisted executable selection for one host. */
 export type HostDependencySelection =
   | { kind: 'path'; path: string }
-  | { kind: 'cli'; command: string }
+  | { kind: 'cli'; command: string; skipValidation?: boolean }
   | null;
 
 // ---------------------------------------------------------------------------

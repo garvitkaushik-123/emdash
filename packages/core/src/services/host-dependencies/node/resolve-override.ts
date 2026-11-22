@@ -16,6 +16,12 @@ export async function resolveOverride(
   exec: IExecutionContext
 ): Promise<HostDependencyResolveResult> {
   const invalid = (message: string) => err({ type: 'invalid-selection' as const, id, message });
+  // An unverified command is kept as typed so the shell resolves it when the agent launches,
+  // e.g. after a worktree setup script has put it on PATH.
+  const unverifiedCommand =
+    selection.kind === 'cli' && selection.skipValidation === true ? selection.command : null;
+  const unverified = (command: string) =>
+    ok({ id, command, path: command, realpath: command, source: selection });
   let path: string;
   if (selection.kind === 'path') {
     path = selection.path;
@@ -28,8 +34,10 @@ export async function resolveOverride(
       );
     }
     const resolved = await resolveCommandPath(selection.command, exec);
-    if (!resolved)
+    if (!resolved) {
+      if (unverifiedCommand !== null) return unverified(unverifiedCommand);
       return invalid(`Command "${selection.command}" was not found on this host's PATH.`);
+    }
     path = resolved;
   }
   if (!isAbsolute(path) || path.includes('\0')) {
@@ -49,6 +57,7 @@ export async function resolveOverride(
       source: selection,
     });
   } catch (error) {
+    if (unverifiedCommand !== null) return unverified(unverifiedCommand);
     return invalid(
       `Cannot use "${path}": ${error instanceof Error ? error.message : String(error)}`
     );

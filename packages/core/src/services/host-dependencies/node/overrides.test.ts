@@ -57,6 +57,53 @@ describe.skipIf(process.platform === 'win32')('host executable overrides', () =>
     return { runtime, store, exec };
   }
 
+  it('rejects a CLI command that is not on PATH unless validation is skipped', async () => {
+    const { runtime } = setup();
+    expect(await runtime.setSelection('claude', { kind: 'cli', command: 'later-agent' })).toEqual({
+      success: false,
+      error: expect.objectContaining({ type: 'invalid-selection', id: 'claude' }),
+    });
+    expect(await runtime.resolve('claude')).toMatchObject({ success: true });
+  });
+
+  it('saves an unresolved CLI command without validation and keeps it after reloading', async () => {
+    const { runtime, store } = setup();
+    const selection = { kind: 'cli' as const, command: 'later-agent', skipValidation: true };
+    expect(await runtime.setSelection('claude', selection)).toMatchObject({
+      success: true,
+      data: { status: 'available', selection, resolved: { command: 'later-agent' } },
+    });
+    expect(await setup(store).runtime.resolve('claude')).toMatchObject({
+      success: true,
+      data: { command: 'later-agent', path: 'later-agent', source: selection },
+    });
+  });
+
+  it('prefers the resolved path when a skipped-validation command is on PATH', async () => {
+    const { runtime } = setup();
+    expect(
+      await runtime.setSelection('claude', {
+        kind: 'cli',
+        command: 'custom-agent',
+        skipValidation: true,
+      })
+    ).toMatchObject({
+      success: true,
+      data: { resolved: { command: 'custom-agent', path: wrapper } },
+    });
+  });
+
+  it('still rejects malformed commands when validation is skipped', async () => {
+    const { runtime } = setup();
+    expect(
+      await runtime.setSelection('claude', {
+        kind: 'cli',
+        command: '--version',
+        skipValidation: true,
+      })
+    ).toMatchObject({ success: false, error: { type: 'invalid-selection' } });
+  });
+
   it('saves an off-PATH wrapper and resolves it after reloading', async () => {
     const { runtime, store } = setup();
     expect(await runtime.setSelection('claude', { kind: 'path', path: wrapper })).toMatchObject({

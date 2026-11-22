@@ -181,6 +181,17 @@ describe('installation override settings', () => {
     expect(vm.setUsed).toHaveBeenCalledWith({ kind: 'cli', command: 'sandbox-claude' });
   });
 
+  it('saves a CLI command without validating it when validation is skipped', async () => {
+    vm.used = { kind: 'cli', command: 'worktree-claude' };
+    await render();
+    await page.getByRole('checkbox').click();
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect
+      .poll(() => vi.mocked(vm.setUsed).mock.calls)
+      .toEqual([[{ kind: 'cli', command: 'worktree-claude', skipValidation: true }]]);
+    expect(vm.resolve).not.toHaveBeenCalled();
+  });
+
   it('shows the installation guide when a documentation URL is available', async () => {
     await render({ installDocs: 'https://example.com/install' });
 

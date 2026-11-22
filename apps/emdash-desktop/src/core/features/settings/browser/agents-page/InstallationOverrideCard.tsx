@@ -1,4 +1,4 @@
-import { Alert, Button, Input, toast } from '@emdash/ui/react/primitives';
+import { Alert, Button, Checkbox, Input, toast } from '@emdash/ui/react/primitives';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import type { HostDependencyInstallation } from '@core/features/agents/api/browser/use-agent-installation-statuses';
@@ -8,6 +8,8 @@ export type InstallationOverrideCardProps = {
   kind: 'path' | 'cli';
   /** Initial value from persisted selection, if any. */
   initialValue?: string;
+  /** Whether the persisted CLI override was saved without validating the command. */
+  initialSkipValidation?: boolean;
   /** Called when checking state changes (for parent to derive 'checking' state). */
   onChecking: (isChecking: boolean) => void;
   onSaved: () => void;
@@ -17,20 +19,26 @@ export function InstallationOverrideCard({
   vm,
   kind,
   initialValue = '',
+  initialSkipValidation = false,
   onChecking,
   onSaved,
 }: InstallationOverrideCardProps) {
   const [value, setValue] = useState(initialValue);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [skipValidation, setSkipValidation] = useState(initialSkipValidation);
+  const skipsValidation = kind === 'cli' && skipValidation;
 
   const handleValidate = async () => {
     setIsChecking(true);
     setError(null);
     onChecking(true);
     try {
-      const selection = kind === 'path' ? { kind, path: value } : { kind, command: value };
-      await vm.resolve(selection);
+      const selection =
+        kind === 'path'
+          ? { kind, path: value }
+          : { kind, command: value, ...(skipsValidation ? { skipValidation: true } : {}) };
+      if (!skipsValidation) await vm.resolve(selection);
       await vm.setUsed(selection);
       toast('Executable override saved');
       onSaved();
@@ -68,6 +76,20 @@ export function InstallationOverrideCard({
           ? "Using an absolute path to the agent binary overrides auto-resolution and disables emdash's ability to update the agent."
           : "Enter the command name or binary resolved on PATH. This overrides auto-resolution and disables emdash's ability to update the agent."}
       </Alert.Root>
+      {kind === 'cli' && (
+        <label className="flex items-start gap-2 text-sm">
+          <Checkbox
+            checked={skipValidation}
+            onCheckedChange={(checked) => setSkipValidation(checked === true)}
+            disabled={isChecking}
+            className="mt-0.5"
+          />
+          <span>
+            Skip validation and resolve the command when the agent launches. Use this when the
+            command is only available after the worktree setup script runs.
+          </span>
+        </label>
+      )}
       {error && <Alert.Root status="destructive">{error}</Alert.Root>}
       {hasValue && (
         <div className="flex justify-end">
@@ -78,7 +100,7 @@ export function InstallationOverrideCard({
             onClick={() => void handleValidate()}
           >
             {isChecking && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Validate
+            {skipsValidation ? 'Save' : 'Validate'}
           </Button>
         </div>
       )}
